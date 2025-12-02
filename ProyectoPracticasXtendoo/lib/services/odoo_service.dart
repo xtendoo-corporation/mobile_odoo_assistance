@@ -1,4 +1,3 @@
-// 4. SERVICIO ODOO CON CONFIGURACIÓN
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -9,39 +8,26 @@ class OdooService {
 
   OdooService(this.config);
 
+  // Método agregado para probar la conexión
   Future<bool> probarConexion() async {
     try {
-      if (config.usarApiRest) {
-        return await _probarConexionRest();
-      } else {
-        return await _probarConexionXmlRpc();
-      }
+      final url = Uri.parse('${config.odooUrl}/web/database/selector');
+      final response = await http.get(url).timeout(
+        Duration(seconds: 10),
+      );
+
+
+      return response.statusCode == 200 || response.statusCode == 404 || response.statusCode == 303;
     } catch (e) {
-      print('Error probando conexión: $e');
+      print('Error en conexión: $e');
       return false;
     }
   }
 
-  Future<bool> _probarConexionRest() async {
-    // Implementación REST
-    final response = await http.post(
-      Uri.parse('${config.odooUrl}/api/auth/token'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'db': config.odooDatabase,
-        'login': config.odooUsername,
-        'password': config.odooPassword,
-      }),
-    ).timeout(Duration(seconds: 10));
-
-    return response.statusCode == 200;
-  }
-
   Future<bool> _probarConexionXmlRpc() async {
-    // Implementación XML-RPC usando el paquete odoo_rpc
-    // Este es un ejemplo simplificado
+
     try {
-      // Aquí iría la implementación real con odoo_rpc
+      // TODO Aquí iría la implementación real con odoo_rpc
       return true;
     } catch (e) {
       return false;

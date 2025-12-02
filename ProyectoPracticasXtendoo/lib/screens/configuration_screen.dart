@@ -1,9 +1,9 @@
-// 3. PANTALLA DE CONFIGURACIÓN
 import 'package:flutter/material.dart';
 
 import '../models/app_config.dart';
 import '../services/config_service.dart';
 import '../services/odoo_service.dart';
+import 'home_screen.dart';
 
 class ConfiguracionScreen extends StatefulWidget {
   @override
@@ -15,14 +15,9 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
   final ConfigService _configService = ConfigService();
 
   final TextEditingController _urlController = TextEditingController();
-  final TextEditingController _dbController = TextEditingController();
-  final TextEditingController _userController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _telefonoController = TextEditingController();
 
-  bool _usarApiRest = false;
   bool _cargando = false;
-  bool _mostrarPassword = false;
 
   @override
   void initState() {
@@ -35,11 +30,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
     if (config != null) {
       setState(() {
         _urlController.text = config.odooUrl;
-        _dbController.text = config.odooDatabase;
-        _userController.text = config.odooUsername;
-        _passwordController.text = config.odooPassword;
         _telefonoController.text = config.numeroTelefono;
-        _usarApiRest = config.usarApiRest;
       });
     }
   }
@@ -52,21 +43,16 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
     try {
       final config = AppConfig(
         odooUrl: _urlController.text.trim(),
-        odooDatabase: _dbController.text.trim(),
-        odooUsername: _userController.text.trim(),
-        odooPassword: _passwordController.text,
         numeroTelefono: _telefonoController.text.trim(),
-        usarApiRest: _usarApiRest,
       );
 
-      // Aquí probarías la conexión real con Odoo
       final odooService = OdooService(config);
       final conectado = await odooService.probarConexion();
 
       if (conectado) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(' Conexión exitosa'),
+            content: Text('✓ Conexión exitosa'),
             backgroundColor: Colors.green,
           ),
         );
@@ -93,11 +79,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
     try {
       final config = AppConfig(
         odooUrl: _urlController.text.trim(),
-        odooDatabase: _dbController.text.trim(),
-        odooUsername: _userController.text.trim(),
-        odooPassword: _passwordController.text,
         numeroTelefono: _telefonoController.text.trim(),
-        usarApiRest: _usarApiRest,
       );
 
       await _configService.guardarConfiguracion(config);
@@ -106,7 +88,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
         SnackBar(content: Text('Configuración guardada')),
       );
 
-      Navigator.pop(context, true); // Retorna true si guardó correctamente
+      Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -126,9 +108,18 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
         title: Text('Configuración'),
         actions: [
           IconButton(
+            icon: Icon(Icons.home),
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => HomeScreen()),
+              );
+            },
+            tooltip: 'Ir a Inicio',
+          ),
+          IconButton(
             icon: Icon(Icons.help_outline),
             onPressed: () {
-              // Mostrar ayuda
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
@@ -187,80 +178,6 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                         return null;
                       },
                     ),
-                    SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _dbController,
-                      decoration: InputDecoration(
-                        labelText: 'Base de datos *',
-                        hintText: 'nombre_empresa',
-                        prefixIcon: Icon(Icons.storage),
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'La base de datos es obligatoria';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _userController,
-                      decoration: InputDecoration(
-                        labelText: 'Usuario *',
-                        hintText: 'admin@empresa.com',
-                        prefixIcon: Icon(Icons.person),
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'El usuario es obligatorio';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _passwordController,
-                      decoration: InputDecoration(
-                        labelText: 'Contraseña *',
-                        prefixIcon: Icon(Icons.lock),
-                        border: OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _mostrarPassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _mostrarPassword = !_mostrarPassword;
-                            });
-                          },
-                        ),
-                      ),
-                      obscureText: !_mostrarPassword,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'La contraseña es obligatoria';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 16),
-
-                    SwitchListTile(
-                      title: Text('Usar API REST'),
-                      subtitle: Text('Desactivado: XML-RPC (recomendado)'),
-                      value: _usarApiRest,
-                      onChanged: (value) {
-                        setState(() => _usarApiRest = value);
-                      },
-                    ),
                   ],
                 ),
               ),
@@ -295,7 +212,6 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                         if (value == null || value.isEmpty) {
                           return 'El teléfono es obligatorio';
                         }
-                        // Validación básica de teléfono
                         final phoneRegex = RegExp(r'^\+?[0-9\s\-\(\)]+$');
                         if (!phoneRegex.hasMatch(value)) {
                           return 'Formato de teléfono inválido';
@@ -378,11 +294,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                   await _configService.limpiarConfiguracion();
                   setState(() {
                     _urlController.clear();
-                    _dbController.clear();
-                    _userController.clear();
-                    _passwordController.clear();
                     _telefonoController.clear();
-                    _usarApiRest = false;
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Configuración eliminada')),
@@ -402,9 +314,6 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
   @override
   void dispose() {
     _urlController.dispose();
-    _dbController.dispose();
-    _userController.dispose();
-    _passwordController.dispose();
     _telefonoController.dispose();
     super.dispose();
   }
