@@ -47,16 +47,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final nueva = !isInside;
 
     try {
-// 1) Guardar nuevo estado localmente
+
       await _saveState(nueva);
       setState(() {
         isInside = nueva;
       });
 
-// 2) Obtener posición (pide permisos si es necesario)
       final posicion = await LocationHelper.getCurrentPosition();
 
-// 3) Leer datos de configuración
       final prefs = await SharedPreferences.getInstance();
       final telefono = prefs.getString('telefono') ?? '';
       final url = prefs.getString('url') ?? '';
@@ -66,7 +64,6 @@ class _HomeScreenState extends State<HomeScreen> {
         throw Exception('Faltan datos en configuración (telefono/url/pin)');
       }
 
-// 4) Enviar al ApiService
       await _apiService.enviarMarcaje(
         baseUrl: url,
         telefono: telefono,
@@ -78,8 +75,8 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Marcaje enviado correctamente')));
     } catch (e) {
-// En caso de error, revertimos el estado guardado localmente y mostramos el error
-      await _saveState(isInside); // mantener el anterior
+
+      await _saveState(isInside);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
     } finally {
