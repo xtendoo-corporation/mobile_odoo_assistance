@@ -21,17 +21,28 @@ class ApiService {
   }) async {
     final accion = entrando ? 'entrando' : 'saliendo';
 
+    // Preparar el body como JSON
+    final Map<String, dynamic> body = {
+      'telefono': telefono,
+      'pin': pin,
+      'accion': accion,
+      'latitud': posicion.latitude,
+      'longitud': posicion.longitude,
+    };
 
-    final payload = '$telefono|$baseUrl|$pin|$accion|${posicion.latitude},${posicion.longitude}';
+    // Hacer la petición POST con tipo JSON
+    final uri = Uri.parse(baseUrl);
 
-    final encoded = Uri.encodeComponent(payload);
-
-    final uri = Uri.parse('$baseUrl?data=$encoded');
-
-    final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+    final resp = await http.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(body),
+    ).timeout(const Duration(seconds: 10));
 
     if (resp.statusCode >= 200 && resp.statusCode < 300) {
-
+      //print('Respuesta del servidor: ${resp.body}');
       return;
     } else {
       throw Exception('Error HTTP: ${resp.statusCode} - ${resp.body}');

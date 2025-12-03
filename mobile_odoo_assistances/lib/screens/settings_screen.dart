@@ -44,7 +44,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 
     if (!mounted) return;
+    // Mostrar mensaje
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Configuración guardada')));
+    // Volver a la pantalla anterior (HomeScreen)
+    Navigator.pop(context);
   }
 
 
