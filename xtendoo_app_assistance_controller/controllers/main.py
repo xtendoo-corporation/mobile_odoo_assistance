@@ -1,32 +1,69 @@
 from odoo import http
 from odoo.http import request
 import json
+import logging
+
+_logger = logging.getLogger(__name__)
 
 class XtendooAppAssistanceController(http.Controller):
+    #cambiamos a http pra ver si funciona en vez de json
     @http.route('/xtendoo/app/assistance', auth='public', type='json', methods=['POST'], csrf=False)
     def assistance(self, **kwargs):
-        #print("Dentro del controller")
+        try:
+            raw = request.httprequest.data.decode('utf-8')
+            data = json.loads(raw)
+            print(f"Datos recibidos: {data}")
 
-        data = request.jsonrequest
-        #data = json.loads(request.body)
+            telefono = data.get('telefono')
+            pin = data.get('pin')
+            latitud = data.get('latitud')
+            longitud = data.get('longitud')
 
-        print(f"Datos recibidos: {data}")
+            print(f"Datos recibidos: telefono:{telefono}, pin:{pin}, latitud:{latitud}, longitud:{longitud}")
 
-        # Extraer los datos del JSON
-        telefono = data.get('telefono')
-        accion = data.get('accion')
-        latitud = data.get('latitud')
-        longitud = data.get('longitud')
-        pin = data.get('pin')
+            if not pin or not telefono:
+                print("pin o telefono no proporcionados")
+                return request.make_json_response({'status': 'error', 'message': 'pin o telefono no proporcionados'})
 
-        print(f"Teléfono: {telefono}, Acción: {accion}, Posición: {latitud},{longitud}")
-        # Aquí procesamos la petición de asistencia
-        # Puedes acceder a los datos enviados en kwargs
-        #for cliente in request.env['xtendoo.cliente'].search([]):
-           # if telefono == "aqui el telefono del cliente" and pin == "aqui el pin del cliente":
-                # Lógica para manejar la petición de asistencia
-               # print("Petición de asistencia válida")
-        return {'status': 'success', 'message': 'Petición de asistencia recibida', 'data': data}
+            employee = request.env ['hr.employee'].sudo().search([('pin', "=", pin), ('phone', "=", telefono)], limit=1)
 
+            if not employee:
+                print ("Empleado no encontrado")
 
+            last_attendance = request.env['hr.attendance'].sudo().search([
+                ('employee_id', '=', employee.id),
+                ('check_out', '=', False)
+            ], limit=1)
 
+            if last_attendance:
+                # Registrar salida (Check-Out)
+                last_attendance.sudo().write({
+                    'check_out': fields.Datetime.now(),
+                    # Opcional: Si tienes campos de latitud/longitud en hr.attendance, añádelos aquí.
+                    # 'checkout_lat': latitud,
+                    # 'checkout_lng': longitud,
+                })
+                action = 'Salida registrada'
+            else:
+                # Registrar entrada (Check-In)
+                request.env['hr.attendance'].sudo().create({
+                    'employee_id': employee.id,
+                    'check_in': fields.Datetime.now(),
+                    # Opcional: Si tienes campos de latitud/longitud en hr.attendance, añádelos aquí.
+                    # 'checkin_lat': latitud,
+                    # 'checkin_lng': longitud,
+                })
+                action = 'Entrada registrada'
+            return request.make_json_response({
+                    'status': 'success',
+                    'message': action,
+                    'employee': employee.name,
+                    'latitud': latitud,
+                    'longitud': longitud
+                })
+
+        except Exception as e:
+            return request.make_json_response({
+                'status': 'error',
+                'message': f'Error interno del servidor: {str(e)}'
+            })
