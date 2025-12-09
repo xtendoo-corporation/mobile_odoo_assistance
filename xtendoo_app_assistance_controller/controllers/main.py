@@ -7,9 +7,10 @@ class XtendooAppAssistanceController(http.Controller):
     def assistance(self, **kwargs):
         #print("Dentro del controller")
 
-        data = request.jsonrequest #data = json.loads(request.body)
+        data = request.jsonrequest
+        #data = json.loads(request.body)
 
-        print(f"Datos recibidos: {kwargs}")
+        print(f"Datos recibidos: {data}")
 
         # Extraer los datos del JSON
         telefono = data.get('telefono')
@@ -25,7 +26,7 @@ class XtendooAppAssistanceController(http.Controller):
            # if telefono == "aqui el telefono del cliente" and pin == "aqui el pin del cliente":
                 # Lógica para manejar la petición de asistencia
                # print("Petición de asistencia válida")
-        return {'status': 'success', 'message': 'Petición de asistencia recibida', 'data': kwargs}
+        return {'status': 'success', 'message': 'Petición de asistencia recibida', 'data': data}
 
 
 
