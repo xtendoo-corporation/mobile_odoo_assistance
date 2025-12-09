@@ -7,14 +7,16 @@ class XtendooAppAssistanceController(http.Controller):
     def assistance(self, **kwargs):
         #print("Dentro del controller")
 
+        data = request.jsonrequest #data = json.loads(request.body)
+
         print(f"Datos recibidos: {kwargs}")
 
         # Extraer los datos del JSON
-        telefono = kwargs.get('telefono')
-        accion = kwargs.get('accion')
-        latitud = kwargs.get('latitud')
-        longitud = kwargs.get('longitud')
-        pin = kwargs.get('pin')
+        telefono = data.get('telefono')
+        accion = data.get('accion')
+        latitud = data.get('latitud')
+        longitud = data.get('longitud')
+        pin = data.get('pin')
 
         print(f"Teléfono: {telefono}, Acción: {accion}, Posición: {latitud},{longitud}")
         # Aquí procesamos la petición de asistencia
