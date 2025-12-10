@@ -47,16 +47,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final nueva = !isInside;
 
     try {
-// 1) Guardar nuevo estado localmente
-      await _saveState(nueva);
-      setState(() {
-        isInside = nueva;
-      });
-
-// 2) Obtener posición (pide permisos si es necesario)
+      // 1) Obtener posición PRIMERO (antes de cambiar estado)
       final posicion = await LocationHelper.getCurrentPosition();
 
-// 3) Leer datos de configuración
+      // 2) Leer datos de configuración
       final prefs = await SharedPreferences.getInstance();
       final telefono = prefs.getString('telefono') ?? '';
       final url = prefs.getString('url') ?? '';
@@ -66,8 +60,8 @@ class _HomeScreenState extends State<HomeScreen> {
         throw Exception('Faltan datos en configuración (telefono/url/pin)');
       }
 
-
-      await _apiService.enviarMarcaje(
+      // 3) Enviar marcaje y esperar respuesta
+      final response = await _apiService.enviarMarcaje(
         baseUrl: url,
         telefono: telefono,
         pin: pin,
@@ -75,13 +69,22 @@ class _HomeScreenState extends State<HomeScreen> {
         posicion: posicion,
       );
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Marcaje enviado correctamente')));
-    } catch (e) {
+      // 4) SOLO si fue exitoso, guardar el nuevo estado
+      await _saveState(nueva);
+      setState(() {
+        isInside = nueva;
+      });
 
-      await _saveState(isInside);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response['message'] ?? 'Marcaje enviado correctamente'))
+      );
+    } catch (e) {
+      // NO cambiar el estado si hubo error
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}'))
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -120,51 +123,65 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Center(
         child: _sending
             ? const CircularProgressIndicator()
-            : ElevatedButton(
-          onPressed: _onFicharPressed,
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-            backgroundColor: isInside ? Colors.green : Colors.red,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (!isInside) ...[
-                Icon(
-                  Icons.arrow_forward,
-                  color: Colors.white,
-                  size: 28,
-                ),
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.home,
-                  color: Colors.white,
-                  size: 28,
-                ),
-              ] else ...[
-                Icon(
-                  Icons.arrow_back,
-                  color: Colors.white,
-                  size: 28,
-                ),
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.door_front_door,
-                  color: Colors.white,
-                  size: 28,
-                ),
-              ],
-              const SizedBox(width: 12),
-              Text(
-                isInside ? 'Fichar Entrada' : 'Fichar Salida',
-                style: const TextStyle(
-                  fontSize: 20,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+            : Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Imagen encima del botón
+            Image.asset(
+              'assets/images/app_icon.png', // Cambia por el nombre de tu imagen
+              width: 200, // Ajusta el tamaño según necesites
+              height: 200,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(height: 30), // Espacio entre imagen y botón
+            // Botón existente
+            ElevatedButton(
+              onPressed: _onFicharPressed,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                backgroundColor: isInside ? Colors.green : Colors.red,
               ),
-            ],
-          ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isInside) ...[  // ✅ Cambiado: si está dentro, mostrar salida
+                    Icon(
+                      Icons.arrow_back,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.door_front_door,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ] else ...[  // ✅ Si está fuera, mostrar entrada
+                    Icon(
+                      Icons.arrow_forward,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.home,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ],
+                  const SizedBox(width: 12),
+                  Text(
+                    isInside ? 'Fichar Salida' : 'Fichar Entrada',  // ✅ Corregido
+                    style: const TextStyle(
+                      fontSize: 20,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

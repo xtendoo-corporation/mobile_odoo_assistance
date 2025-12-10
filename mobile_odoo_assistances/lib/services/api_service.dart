@@ -2,10 +2,8 @@ import 'dart:convert';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
-
 class ApiService {
-
-  Future<void> enviarMarcaje({
+  Future<Map<String, dynamic>> enviarMarcaje({
     required String baseUrl,
     required String telefono,
     required String pin,
@@ -14,7 +12,6 @@ class ApiService {
   }) async {
     final accion = entrando ? 'entrando' : 'saliendo';
 
-    // Preparar el body como JSON
     final Map<String, dynamic> body = {
       'telefono': telefono,
       'pin': pin,
@@ -23,7 +20,6 @@ class ApiService {
       'longitud': posicion.longitude,
     };
 
-    // Hacer la petición POST con tipo JSON
     final uri = Uri.parse(baseUrl);
 
     final resp = await http.post(
@@ -35,8 +31,15 @@ class ApiService {
     ).timeout(const Duration(seconds: 10));
 
     if (resp.statusCode >= 200 && resp.statusCode < 300) {
-      //print('Respuesta del servidor: ${resp.body}');
-      return;
+      // Parsear la respuesta JSON
+      final responseData = jsonDecode(resp.body);
+
+      // Verificar el status en la respuesta
+      if (responseData['status'] == 'success') {
+        return responseData;
+      } else {
+        throw Exception(responseData['message'] ?? 'Error desconocido del servidor');
+      }
     } else {
       throw Exception('Error HTTP: ${resp.statusCode} - ${resp.body}');
     }
