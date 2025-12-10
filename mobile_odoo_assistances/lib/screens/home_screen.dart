@@ -17,12 +17,46 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isInside = false;
   final ApiService _apiService = ApiService();
   bool _sending = false;
-
+  bool _initialLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadState();
+    _loadInitialState();
+  }
+  Future<void> _fetchOdooStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final telefono = prefs.getString('telefono') ?? '';
+    final url = prefs.getString('url') ?? '';
+    final pin = prefs.getString('pin') ?? '';
+
+    if (telefono.isNotEmpty && url.isNotEmpty && pin.isNotEmpty) {
+      try {
+
+        final currentStatus = await _apiService.getEmployeeStatus(
+          baseUrl: url,
+          telefono: telefono,
+          pin: pin,
+        );
+
+        await _saveState(currentStatus);
+        setState(() {
+          isInside = currentStatus;
+        });
+      } catch (e) {
+
+        print('Error al obtener estado de Odoo: $e');
+      }
+    }
+  }
+  Future<void> _loadInitialState() async {
+    await _loadState();
+
+    await _fetchOdooStatus();
+
+    setState(() {
+      _initialLoading = false;
+    });
   }
 
   Future<void> _loadState() async {
@@ -69,7 +103,6 @@ class _HomeScreenState extends State<HomeScreen> {
         posicion: posicion,
       );
 
-      // 4) SOLO si fue exitoso, guardar el nuevo estado
       await _saveState(nueva);
       setState(() {
         isInside = nueva;
@@ -80,7 +113,6 @@ class _HomeScreenState extends State<HomeScreen> {
           SnackBar(content: Text(response['message'] ?? 'Marcaje enviado correctamente'))
       );
     } catch (e) {
-      // NO cambiar el estado si hubo error
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: ${e.toString()}'))
@@ -121,19 +153,19 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: Center(
-        child: _sending
+        child: _initialLoading || _sending
             ? const CircularProgressIndicator()
             : Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Imagen encima del botón
             Image.asset(
-              'assets/images/app_icon.png', // Cambia por el nombre de tu imagen
-              width: 200, // Ajusta el tamaño según necesites
+              'assets/images/app_icon.png',
+              width: 200,
               height: 200,
               fit: BoxFit.contain,
             ),
-            const SizedBox(height: 30), // Espacio entre imagen y botón
+            const SizedBox(height: 30),
             // Botón existente
             ElevatedButton(
               onPressed: _onFicharPressed,
