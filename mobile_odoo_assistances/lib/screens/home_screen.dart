@@ -139,12 +139,12 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: _onFicharPressed,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                backgroundColor: isInside ? Colors.green : Colors.red,
+                backgroundColor: isInside ? Colors.red : Colors.green,
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (isInside) ...[  // ✅ Cambiado: si está dentro, mostrar salida
+                  if (isInside) ...[
                     Icon(
                       Icons.arrow_back,
                       color: Colors.white,
@@ -156,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Colors.white,
                       size: 28,
                     ),
-                  ] else ...[  // ✅ Si está fuera, mostrar entrada
+                  ] else ...[
                     Icon(
                       Icons.arrow_forward,
                       color: Colors.white,
@@ -171,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                   const SizedBox(width: 12),
                   Text(
-                    isInside ? 'Fichar Salida' : 'Fichar Entrada',  // ✅ Corregido
+                    isInside ? 'Fichar Salida' : 'Fichar Entrada',
                     style: const TextStyle(
                       fontSize: 20,
                       color: Colors.white,
