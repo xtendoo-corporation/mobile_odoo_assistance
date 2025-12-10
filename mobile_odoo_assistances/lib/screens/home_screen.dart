@@ -66,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
         throw Exception('Faltan datos en configuración (telefono/url/pin)');
       }
 
-// 4) Enviar al ApiService
+
       await _apiService.enviarMarcaje(
         baseUrl: url,
         telefono: telefono,
@@ -78,8 +78,8 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Marcaje enviado correctamente')));
     } catch (e) {
-// En caso de error, revertimos el estado guardado localmente y mostramos el error
-      await _saveState(isInside); // mantener el anterior
+
+      await _saveState(isInside);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
     } finally {
@@ -95,6 +95,15 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Image.asset(
+            'assets/images/top_left_logo.png',
+            width: 36,
+            height: 36,
+            fit: BoxFit.contain,
+          ),
+        ),
         title: const Text('Control Horario'),
         actions: [
           IconButton(
@@ -113,11 +122,51 @@ class _HomeScreenState extends State<HomeScreen> {
             ? const CircularProgressIndicator()
             : ElevatedButton(
           onPressed: _onFicharPressed,
-          style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20)),
-          child: Text(isInside ? 'Fichar / Salir' : 'Fichar / Entrar', style: const TextStyle(fontSize: 20)),
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+            backgroundColor: isInside ? Colors.green : Colors.red,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!isInside) ...[
+                Icon(
+                  Icons.arrow_forward,
+                  color: Colors.white,
+                  size: 28,
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.home,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ] else ...[
+                Icon(
+                  Icons.arrow_back,
+                  color: Colors.white,
+                  size: 28,
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.door_front_door,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ],
+              const SizedBox(width: 12),
+              Text(
+                isInside ? 'Fichar Entrada' : 'Fichar Salida',
+                style: const TextStyle(
+                  fontSize: 20,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
