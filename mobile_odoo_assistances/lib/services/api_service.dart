@@ -82,7 +82,7 @@ class ApiService {
         throw Exception('Error HTTP: ${resp.statusCode} - ${resp.body}');
       }
     } catch (e) {
-      _logger.error('Error en getEmployeeStatus: $e');
+
       // Re-lanzar la excepción para que sea manejada en _fetchOdooStatus
       rethrow;
     }
