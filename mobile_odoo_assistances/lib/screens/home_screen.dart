@@ -30,36 +30,44 @@ class _HomeScreenState extends State<HomeScreen> {
     final url = prefs.getString('url') ?? '';
     final pin = prefs.getString('pin') ?? '';
 
-    if (telefono.isNotEmpty && url.isNotEmpty && pin.isNotEmpty) {
-      try {
+    if (telefono.isEmpty || url.isEmpty || pin.isEmpty) {
+      throw Exception('Configuración incompleta');
+    }
 
-        final currentStatus = await _apiService.getEmployeeStatus(
-          baseUrl: url,
-          telefono: telefono,
-          pin: pin,
-        );
+    final currentStatus = await _apiService.getEmployeeStatus(
+      baseUrl: url,
+      telefono: telefono,
+      pin: pin,
+    );
 
-        await _saveState(currentStatus);
-        setState(() {
-          isInside = currentStatus;
-        });
-      } catch (e) {
+    // Actualizar estado local con el estado del servidor
+    await _saveState(currentStatus);
 
-        print('Error al obtener estado de Odoo: $e');
-      }
+    if (mounted) {
+      setState(() {
+        isInside = currentStatus;
+      });
     }
   }
   Future<void> _loadInitialState() async {
-    await _loadState();
-
-    await _fetchOdooStatus();
-
     setState(() {
-      _initialLoading = false;
+      _initialLoading = true;
     });
+
+    try {
+      await _fetchOdooStatus();
+    } catch (e) {
+      print('Error al cargar estado inicial: $e');
+      // Si falla, intenta cargar el estado local como fallback
+      await _loadLocalState();
+    } finally {
+      setState(() {
+        _initialLoading = false;
+      });
+    }
   }
 
-  Future<void> _loadState() async {
+  Future<void> _loadLocalState() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       isInside = prefs.getBool('isInside') ?? false;
@@ -78,13 +86,13 @@ class _HomeScreenState extends State<HomeScreen> {
       _sending = true;
     });
 
-    final nueva = !isInside;
+    final estadoAnterior = isInside; // Guardar estado anterior por si falla
 
     try {
-      // 1) Obtener posición PRIMERO (antes de cambiar estado)
+      // 1) Obtener posición
       final posicion = await LocationHelper.getCurrentPosition();
 
-      // 2) Leer datos de configuración
+      // 2) Leer configuración
       final prefs = await SharedPreferences.getInstance();
       final telefono = prefs.getString('telefono') ?? '';
       final url = prefs.getString('url') ?? '';
@@ -94,28 +102,41 @@ class _HomeScreenState extends State<HomeScreen> {
         throw Exception('Faltan datos en configuración (telefono/url/pin)');
       }
 
-      // 3) Enviar marcaje y esperar respuesta
+      // 3) Calcular nuevo estado (el opuesto al actual)
+      final nuevoEstado = !isInside;
+
+      // 4) Enviar marcaje a Odoo
       final response = await _apiService.enviarMarcaje(
         baseUrl: url,
         telefono: telefono,
         pin: pin,
-        entrando: nueva,
+        entrando: nuevoEstado,
         posicion: posicion,
       );
 
-      await _saveState(nueva);
+      // 5) Solo si la respuesta es exitosa, consultar el estado REAL desde Odoo
+      await _fetchOdooStatus();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(response['message'] ?? 'Marcaje enviado correctamente'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      // Si falla, restaurar el estado anterior
       setState(() {
-        isInside = nueva;
+        isInside = estadoAnterior;
       });
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response['message'] ?? 'Marcaje enviado correctamente'))
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}'))
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
       );
     } finally {
       if (mounted) {
@@ -125,6 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -143,11 +165,14 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              // Navegar a settings y recargar estado al volver
+              await Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const SettingsScreen()),
               );
+              // Recargar el estado desde el servidor al volver de settings
+              _loadInitialState();
             },
           ),
         ],
@@ -158,7 +183,6 @@ class _HomeScreenState extends State<HomeScreen> {
             : Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Imagen encima del botón
             Image.asset(
               'assets/images/app_icon.png',
               width: 200,
@@ -166,7 +190,6 @@ class _HomeScreenState extends State<HomeScreen> {
               fit: BoxFit.contain,
             ),
             const SizedBox(height: 30),
-            // Botón existente
             ElevatedButton(
               onPressed: _onFicharPressed,
               style: ElevatedButton.styleFrom(
@@ -177,25 +200,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (isInside) ...[
-                    Icon(
+                    const Icon(
                       Icons.arrow_back,
                       color: Colors.white,
                       size: 28,
                     ),
                     const SizedBox(width: 4),
-                    Icon(
+                    const Icon(
                       Icons.door_front_door,
                       color: Colors.white,
                       size: 28,
                     ),
                   ] else ...[
-                    Icon(
+                    const Icon(
                       Icons.arrow_forward,
                       color: Colors.white,
                       size: 28,
                     ),
                     const SizedBox(width: 4),
-                    Icon(
+                    const Icon(
                       Icons.home,
                       color: Colors.white,
                       size: 28,
